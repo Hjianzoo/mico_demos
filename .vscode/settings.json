@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "tcp_client.h": "c",
+        "mico.h": "c",
+        "mico_system.h": "c",
+        "mico_rtos.h": "c",
+        "tcp_client_app.h": "c"
+    },
+    "C_Cpp.dimInactiveRegions": false
+}
