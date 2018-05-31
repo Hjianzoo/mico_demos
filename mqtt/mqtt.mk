@@ -22,7 +22,7 @@
 ############################################################################### 
 NAME := App_AWS_Iot_sub_pub
 
-$(NAME)_SOURCES := mico_main.c mqtt_main.c
+$(NAME)_SOURCES := mico_main.c mqtt_main.c tcp_client/tcp_client.c tcp_client/tcp_client_app.c
 
 $(NAME)_COMPONENTS := lib_mqtt
 

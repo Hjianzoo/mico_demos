@@ -53,8 +53,10 @@ int application_start( void )
     /* Wait for wlan connection*/
     mico_rtos_get_semaphore( &wait_sem, MICO_WAIT_FOREVER );
     app_log("wifi connected successful");
-
+    
     start_mqtt_sub_pub();
+
+    TcpClientAppStart();
 
     exit:
     mico_system_notify_remove( mico_notify_WIFI_STATUS_CHANGED,

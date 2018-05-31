@@ -146,6 +146,7 @@ RECONN:
             mqtt_log("QOS1 publish ack not received");
             rc = MQTT_SUCCESS;
         }
+        while(1);
     }
 
     exit:
