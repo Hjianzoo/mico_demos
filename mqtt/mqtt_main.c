@@ -185,7 +185,11 @@ return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_su
                                     stack_size,
                                     0 );
 }
-
+/*************************************************************************************************
+ * @description:mqtt timer定时函数
+ * @param none
+ * @return none
+**************************************************************************************************/
 static void MqttTimerHandler(uint32_t arg)
 {
     char str_temp[30] = {};
@@ -200,7 +204,13 @@ static void MqttTimerHandler(uint32_t arg)
     if(i>10000)
         i = 0;
 }
-
+/*************************************************************************************************
+ * @description:mqtt Publish接口，将需要publish的数据放入队列中
+ * @param topic：publish的topic
+ * @param payload:publish的数据
+ * @param len:数据长度
+ * @return: -1:返回不正常，0:返回正常
+**************************************************************************************************/
 OSStatus MqttTopicPublish(char* topic,char* payload,int len)
 {
     int err = 0;
