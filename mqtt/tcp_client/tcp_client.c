@@ -103,7 +103,7 @@ void Tcp_Client_Thread(uint32_t arg)
         }
     }
     exit:
-    if(err != 0) tcp_client_log("tcp client thread exit with err:%d",err);
+    tcp_client_log("tcp client thread exit with err:%d",err);
     connect_flag = 0;
     tcp_client.conn_fail_callback();
     if(buf != NULL) free(buf);

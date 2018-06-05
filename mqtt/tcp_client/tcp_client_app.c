@@ -109,11 +109,10 @@ void AppTimerHandler(uint32_t arg)
 {
     int err = 0;
     msg_t* pop_msg = NULL;
-    
     tcp_client_app_log("%s  connetstatus: %d",__FUNCTION__,GetTcpClientConnetStatus());
     char *buf_temp = "hello hjian";
     TcpClientSendToServer(buf_temp,strlen(buf_temp));
-    tcp_client_app_log ("free Memory %d bytes", MicoGetMemoryInfo()->free_memory);  
+    
 }
 
 
@@ -127,7 +126,6 @@ int TcpClientAppStart(void)
     int err = 0;
     StartTcpClient();
     err = mico_rtos_init_timer(&app_timer,APP_TIMER_PRIOR,AppTimerHandler,NULL);
-
     if(err != 0)
     {
         tcp_client_app_log("init timer fail");

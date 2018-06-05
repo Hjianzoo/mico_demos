@@ -4,6 +4,12 @@
 
 #define mqtt_log(M, ...) custom_log("mqtt", M, ##__VA_ARGS__)
 
+static mico_queue_t mqtt_queue;
+static mico_timer_t mqtt_timer;
+
+OSStatus MqttTopicPublish(char* topic,char* payload,int len);
+static void MqttTimerHandler(uint32_t arg);
+
 char *mqtt_client_id_get( char clientid[30] )
 {
     uint8_t mac[6];
@@ -36,6 +42,7 @@ static void mqtt_sub_pub_main( mico_thread_arg_t arg )
 
     char clientid[40];
     char cPayload[100];
+    mqtt_msg_t* mqtt_msg_pop;
     int i = 0;
     MQTT_Client client;
     IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
@@ -85,10 +92,10 @@ static void mqtt_sub_pub_main( mico_thread_arg_t arg )
     connectParams.pClientID = MQTT_CLIENT_ID;
     connectParams.clientIDLen = (uint16_t) strlen( MQTT_CLIENT_ID );
     connectParams.isWillMsgPresent = false;
-    connectParams.pUsername = MQTT_USERNAME;
-    connectParams.usernameLen = strlen(MQTT_USERNAME);
-    connectParams.pPassword = MQTT_PASSWORD;
-    connectParams.passwordLen = strlen(MQTT_PASSWORD);
+    connectParams.pUsername = NULL;//MQTT_USERNAME;
+    connectParams.usernameLen = 0;//strlen(MQTT_USERNAME);
+    connectParams.pPassword = NULL;//MQTT_PASSWORD;
+    connectParams.passwordLen = 0;//strlen(MQTT_PASSWORD);
 
 RECONN:
     mqtt_log("Connecting...");
@@ -100,7 +107,7 @@ RECONN:
         goto RECONN;
     }
 
-    mqtt_log("Subscribing...");
+    mqtt_log("Subscribing...   %s",MQTT_SUB_NAME);
     rc = mqtt_subscribe( &client, MQTT_SUB_NAME, strlen( MQTT_SUB_NAME ), QOS0,
                          iot_subscribe_callback_handler, NULL );
     if ( MQTT_SUCCESS != rc )
@@ -132,21 +139,32 @@ RECONN:
             mqtt_disconnect( &client );
             goto RECONN;
         }
-
+        if(mico_rtos_pop_from_queue(&mqtt_queue,&mqtt_msg_pop,0) == 0)
+        {
+            if(mqtt_msg_pop == NULL)
+                continue;
+            paramsQOS0.payloadLen = mqtt_msg_pop->len;
+            paramsQOS0.payload = (void*)mqtt_msg_pop->data;
+            rc = mqtt_publish(&client,mqtt_msg_pop->topic,strlen(mqtt_msg_pop->topic),&paramsQOS0);
+            mqtt_log("publish err = %d, %s(%d) : %s",rc,mqtt_msg_pop->topic,mqtt_msg_pop->len,mqtt_msg_pop->data);
+            free(mqtt_msg_pop);
+        }
+        else
+            continue;
+        #if 0
         mqtt_log("-->sleep, rc:%d", rc);
         sprintf( cPayload, "%s : %d ", "hello from SDK QOS0", i++ );
         paramsQOS0.payloadLen = strlen( cPayload );
-        mqtt_publish( &client, MQTT_SUB_NAME, strlen( MQTT_SUB_NAME ), &paramsQOS0 );
-
+        mqtt_publish( &client, MQTT_PUB_NAME, strlen( MQTT_PUB_NAME ), &paramsQOS0 );
         sprintf( cPayload, "%s : %d ", "hello from SDK QOS1", i++ );
         paramsQOS1.payloadLen = strlen( cPayload );
-        rc = mqtt_publish( &client, MQTT_SUB_NAME, strlen( MQTT_SUB_NAME ), &paramsQOS1 );
+        rc = mqtt_publish( &client, MQTT_PUB_NAME, strlen( MQTT_PUB_NAME ), &paramsQOS1 );
         if ( rc == MQTT_REQUEST_TIMEOUT_ERROR )
         {
             mqtt_log("QOS1 publish ack not received");
             rc = MQTT_SUCCESS;
         }
-        while(1);
+#endif
     }
 
     exit:
@@ -160,7 +178,50 @@ OSStatus start_mqtt_sub_pub( void )
 #else
     uint32_t stack_size = 0x2000;
 #endif
-    return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_sub_pub_main,
+mico_rtos_init_queue(&mqtt_queue,"mqtt queue",sizeof(int),8);
+mico_rtos_init_timer(&mqtt_timer,MQTT_TIMER_PERIO,MqttTimerHandler,NULL);
+mico_rtos_start_timer(&mqtt_timer);
+return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_sub_pub_main,
                                     stack_size,
                                     0 );
+}
+
+static void MqttTimerHandler(uint32_t arg)
+{
+    char str_temp[30] = {};
+    static int i = 0;
+    sprintf(str_temp,"%s : %d","hello mqtt timer handle",i++);
+    mqtt_log("%s",str_temp);
+    if((i%2) == 0)
+        MqttTopicPublish(MQTT_PUB_NAME,str_temp,sizeof(str_temp));
+    else
+        MqttTopicPublish(MQTT_PUB_NAME1,str_temp,sizeof(str_temp));
+    mqtt_log ("free Memory %d bytes", MicoGetMemoryInfo()->free_memory);  
+    if(i>10000)
+        i = 0;
+}
+
+OSStatus MqttTopicPublish(char* topic,char* payload,int len)
+{
+    int err = 0;
+    mqtt_msg_t* mqtt_msg_push = NULL;
+    mqtt_msg_push = (mqtt_msg_t*)malloc(sizeof(mqtt_msg_t)-1+len);
+    if(NULL == mqtt_msg_push)
+    {
+        mqtt_log("malloc mqtt_msg_push error");
+        return -1;
+    }
+    mqtt_msg_push->len = len;
+    mqtt_msg_push->topic = topic;
+    memcpy(mqtt_msg_push->data,payload,len);
+    mqtt_log("push mqtt msg:%s,%d,%s",mqtt_msg_push->topic,mqtt_msg_push->len,mqtt_msg_push->data);
+    err = mico_rtos_push_to_queue(&mqtt_queue,&mqtt_msg_push,0);
+    if(err != 0)
+    {
+        mqtt_log("push mqtt_msg_push fail");
+        if(mqtt_msg_push != NULL)
+            free(mqtt_msg_push);
+        return -1;
+    }
+    return 0;
 }

@@ -1,5 +1,5 @@
 #include "mico.h"
-
+//#include "http_client.h"
 #define app_log(M, ...) custom_log("APP", M, ##__VA_ARGS__)
 #define app_log_trace() custom_log_trace("APP")
 
@@ -56,7 +56,8 @@ int application_start( void )
     
     start_mqtt_sub_pub();
 
-    TcpClientAppStart();
+   // TcpClientAppStart();
+    HttpClientAppStart();
 
     exit:
     mico_system_notify_remove( mico_notify_WIFI_STATUS_CHANGED,
