@@ -15,6 +15,9 @@ Content-Length: 69\r\n\r\n\
 #define HTTP_OTA_HOST  "ota.fogcloud.io"
 
 
+
+int DealWithOtaHttpResponse(char* buf,int len);
+
 void GetDownloadUrlTcpClientThread(uint32_t arg)
 {
     int err = 0;
@@ -76,9 +79,6 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
         goto exit;
     msleep(2);
     http_client_log("send to http server:\r\n%s",HTTP_REQUEST_HEADER_1);
-    // err = send(tcp_fd,HTTP_REQUEST_PREVIEW_1,sizeof(HTTP_REQUEST_PREVIEW_1),0);
-    // if(err == 0)
-    //     goto exit;
     while(1)
     {
         FD_ZERO(&readfds);
@@ -100,6 +100,7 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
             }
             buf[len] = '\0';
             http_client_log("recv data(len %d): %s",len,buf);
+            DealWithOtaHttpResponse(buf,len);
         }
     }
     exit:
@@ -117,4 +118,32 @@ int HttpClientAppStart(void)
     if(err != 0)
         http_client_log("create tcp client thread fail");
     return err;
+}
+
+
+int DealWithOtaHttpResponse(char* buf,int len)
+{
+    char* str_temp = NULL;
+    char* sub_str = NULL;
+    int len_temp = 0;
+    char http_response_state[20];
+    str_temp = strstr(buf,"HTTP/1.1");
+    if(str_temp == NULL)
+        return 1;
+    sub_str = strstr(buf,"\r\n");
+    len_temp = sub_str-str_temp;
+    memcpy(http_response_state,str_temp,len_temp);
+    http_client_log("http response state:%s",http_response_state);
+    if(strcmp(http_response_state,"HTTP/1.1 200 OK") != 0)
+    {
+        http_client_log("bad http response!");
+        return -1;
+    }
+    str_temp = strchr(buf,'{');
+    sub_str = strstr(str_temp,"\r\n");
+    len_temp = sub_str-str_temp;
+    http_client_log("context(len:%d):%s",len_temp,str_temp);
+
+
+    return 0;
 }

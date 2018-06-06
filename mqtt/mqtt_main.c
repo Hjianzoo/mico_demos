@@ -180,7 +180,7 @@ OSStatus start_mqtt_sub_pub( void )
 #endif
 mico_rtos_init_queue(&mqtt_queue,"mqtt queue",sizeof(int),8);
 mico_rtos_init_timer(&mqtt_timer,MQTT_TIMER_PERIO,MqttTimerHandler,NULL);
-mico_rtos_start_timer(&mqtt_timer);
+//mico_rtos_start_timer(&mqtt_timer);
 return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_sub_pub_main,
                                     stack_size,
                                     0 );
@@ -224,7 +224,6 @@ OSStatus MqttTopicPublish(char* topic,char* payload,int len)
     mqtt_msg_push->len = len;
     mqtt_msg_push->topic = topic;
     memcpy(mqtt_msg_push->data,payload,len);
-    mqtt_log("push mqtt msg:%s,%d,%s",mqtt_msg_push->topic,mqtt_msg_push->len,mqtt_msg_push->data);
     err = mico_rtos_push_to_queue(&mqtt_queue,&mqtt_msg_push,0);
     if(err != 0)
     {
