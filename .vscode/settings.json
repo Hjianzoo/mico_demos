@@ -4,7 +4,8 @@
         "mico.h": "c",
         "mico_system.h": "c",
         "mico_rtos.h": "c",
-        "tcp_client_app.h": "c"
+        "tcp_client_app.h": "c",
+        "debug.h": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "aliosStudio.sdkPath": "C:\\Users\\Hjianzoo\\.aos\\AliOS-Things"
