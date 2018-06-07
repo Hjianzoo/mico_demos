@@ -23,6 +23,7 @@ int TcpClientParaInit(tcp_client_t* p)
     p->conn_suc_callback = TcpClientConnectSuccess;
     p->conn_fail_callback = TcpClientConnectFail;
     p->process_recv = TcpClientRecvFromServer;
+    return 0;
 }
 
 /*************************************************************************************************
@@ -33,6 +34,7 @@ int TcpClientParaInit(tcp_client_t* p)
 int TcpClientConnectSuccess(void)
 {
     tcp_client_app_log("p->conn_suc_callback:%s",__FUNCTION__);
+    return 0;
 }
 
 /*************************************************************************************************
@@ -43,6 +45,7 @@ int TcpClientConnectSuccess(void)
 int TcpClientConnectFail(void)
 {
     tcp_client_app_log("p->conn_fail_callback:%s",__FUNCTION__);
+    return 0;
 }
 
 
@@ -53,7 +56,7 @@ int TcpClientConnectFail(void)
  * @param len: 发送长度
  * @return : 0
 **************************************************************************************************/
-int TcpClientRecvFromServer(uint8_t* buf,int len)
+int TcpClientRecvFromServer(char* buf,int len)
 {
     buf[len] = '\0';
     tcp_client_app_log("tcp client recv from server: %s",buf);
@@ -68,10 +71,9 @@ int TcpClientRecvFromServer(uint8_t* buf,int len)
  * @param len: 发送长度
  * @return : 0
 **************************************************************************************************/
-int TcpClientSendToServer(uint8_t* buf,int len)
+int TcpClientSendToServer(char* buf,int len)
 {
     msg_t* push_msg;
-    msg_t* pop_msg;
     int err = 0;
     push_msg = (msg_t*)malloc(sizeof(msg_t)-1+len);
     if(push_msg == NULL)
@@ -87,7 +89,6 @@ int TcpClientSendToServer(uint8_t* buf,int len)
         goto exit;
     }
     tcp_client_app_log("send data to server:%s len:%d",push_msg->data,push_msg->len);
-    tcp_client_app_log("push msg addr :%d",push_msg);
     err = mico_rtos_push_to_queue(&socket_queue,&push_msg,0);
     if(err != 0)
     {
@@ -105,7 +106,7 @@ int TcpClientSendToServer(uint8_t* buf,int len)
  * @param none
  * @return  none
 **************************************************************************************************/
-void AppTimerHandler(uint32_t arg)
+void AppTimerHandler(void* arg)
 {
     int err = 0;
     msg_t* pop_msg = NULL;
@@ -132,7 +133,7 @@ int TcpClientAppStart(void)
         goto exit;
     }
     mico_rtos_start_timer(&app_timer);
-    return;
+    return 0;
     exit:
     return -1;
 }

@@ -11,7 +11,7 @@ typedef struct MSG{
 int TcpClientConnectSuccess(void);
 int TcpClientConnectFail(void);
 int TcpClientParaInit(tcp_client_t* p);
-int TcpClientSendToServer(uint8_t* buf,int len);
-int TcpClientRecvFromServer(uint8_t* buf,int len);
+int TcpClientSendToServer(char* buf,int len);
+int TcpClientRecvFromServer(char* buf,int len);
 
 #endif

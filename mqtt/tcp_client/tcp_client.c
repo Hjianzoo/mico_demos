@@ -32,6 +32,7 @@ int GetTcpClientConnetStatus(void)
 void Tcp_Client_Thread(uint32_t arg)
 {
     int err = 0;
+    tcp_client_t* tcp_client_p = (tcp_client_t*)arg;
     tcp_client_log("start tcp client thread");
     struct sockaddr_in addr;
     struct timeval t;
@@ -162,7 +163,7 @@ void StartTcpClient(void)
     {
         tcp_client_log("init socket queue fail");
     }
-    err = mico_rtos_create_thread(NULL, MICO_APPLICATION_PRIORITY, "tcp client",Tcp_Client_Thread,TCP_CLIENT_STACK_SIZE,0);
+    err = mico_rtos_create_thread(NULL, MICO_APPLICATION_PRIORITY, "tcp client",Tcp_Client_Thread,TCP_CLIENT_STACK_SIZE,(mico_thread_arg_t*)&tcp_client);
     if(err != 0)
         tcp_client_log("create tcp client thread fail");
     

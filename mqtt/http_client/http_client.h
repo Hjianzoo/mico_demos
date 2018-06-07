@@ -8,6 +8,6 @@ typedef struct HTTP_REQ_INFO{
     int (*recv_deal_callback)(char*,int);
 }HTTP_REQ_INFO_T;
 
-void SendHttpRequest(HTTP_REQ_INFO_T* req);
+int SendHttpRequest(HTTP_REQ_INFO_T* req);
 
 #endif

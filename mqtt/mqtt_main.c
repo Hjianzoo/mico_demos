@@ -8,7 +8,7 @@ static mico_queue_t mqtt_queue;
 static mico_timer_t mqtt_timer;
 
 OSStatus MqttTopicPublish(char* topic,char* payload,int len);
-static void MqttTimerHandler(uint32_t arg);
+static void MqttTimerHandler(void);
 
 char *mqtt_client_id_get( char clientid[30] )
 {
@@ -48,7 +48,7 @@ static void mqtt_sub_pub_main( mico_thread_arg_t arg )
     IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
     IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
     IoT_Publish_Message_Params paramsQOS0;
-    IoT_Publish_Message_Params paramsQOS1;
+    //IoT_Publish_Message_Params paramsQOS1;
 
     /*
      * Enable Auto Reconnect functionality. Minimum and Maximum time of Exponential backoff are set in aws_iot_config.h
@@ -123,9 +123,9 @@ RECONN:
     paramsQOS0.payload = (void *) cPayload;
     paramsQOS0.isRetained = 0;
 
-    paramsQOS1.qos = QOS1;
-    paramsQOS1.payload = (void *) cPayload;
-    paramsQOS1.isRetained = 0;
+    // paramsQOS1.qos = QOS1;
+    // paramsQOS1.payload = (void *) cPayload;
+    // paramsQOS1.isRetained = 0;
 
     while ( 1 )
     {
@@ -190,7 +190,7 @@ return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_su
  * @param none
  * @return none
 **************************************************************************************************/
-static void MqttTimerHandler(uint32_t arg)
+static void MqttTimerHandler(void)
 {
     char str_temp[30] = {};
     static int i = 0;
