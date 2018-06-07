@@ -107,7 +107,7 @@ RECONN:
         goto RECONN;
     }
 
-    mqtt_log("Subscribing...   %s",MQTT_SUB_NAME);
+    mqtt_log("Subscribing  : %s",MQTT_SUB_NAME);
     rc = mqtt_subscribe( &client, MQTT_SUB_NAME, strlen( MQTT_SUB_NAME ), QOS0,
                          iot_subscribe_callback_handler, NULL );
     if ( MQTT_SUCCESS != rc )
@@ -180,7 +180,7 @@ OSStatus start_mqtt_sub_pub( void )
 #endif
 mico_rtos_init_queue(&mqtt_queue,"mqtt queue",sizeof(int),8);
 mico_rtos_init_timer(&mqtt_timer,MQTT_TIMER_PERIO,MqttTimerHandler,NULL);
-//mico_rtos_start_timer(&mqtt_timer);
+mico_rtos_start_timer(&mqtt_timer);
 return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_sub_pub_main,
                                     stack_size,
                                     0 );

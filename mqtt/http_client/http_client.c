@@ -1,24 +1,12 @@
 #include "mico.h"
 #include "SocketUtils.h"
+#include "cJSON.h"
+#include "http_client.h"
 
 #define http_client_log(M, ...) custom_log("HTTP_Client", M, ##__VA_ARGS__)
 
-char HTTP_REQUEST_HEADER_1[] = {\
-"PUT /v3/ota/product/ HTTP/1.1\r\n\
-Host: ota.fogcloud.io\r\n\
-Connection: Close\r\n\
-Content-Type: application/json\r\n\
-Content-Length: 69\r\n\r\n\
-{\"productid\":\"cc085cdc581e11e8b7ac00163e30fc50\",\"dsn\":\"B0F893151E9F\"}\r\n\r\n"
-};
 
-#define HTTP_OTA_HOST  "ota.fogcloud.io"
-
-
-
-int DealWithOtaHttpResponse(char* buf,int len);
-
-void GetDownloadUrlTcpClientThread(uint32_t arg)
+void SendHttpRequest(HTTP_REQ_INFO_T* req)
 {
     int err = 0;
     http_client_log("start------------>%s",__FUNCTION__);
@@ -35,10 +23,10 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
     buf = (char*)malloc(1024);
     if (buf == NULL)
     {
-        http_client_log("int buf fail");
+        http_client_log("init buf fail");
         goto exit;
     }
-    hostent_content = gethostbyname(HTTP_OTA_HOST);
+    hostent_content = gethostbyname(req->host);
     if(hostent_content == NULL)
     {
         http_client_log("gethostbyname fail");
@@ -47,7 +35,7 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
     pptr = hostent_content->h_addr_list;
     in_addr.s_addr = *(uint32_t*)(*pptr);
     strcpy(ipstr,inet_ntoa(in_addr));
-    http_client_log("HTTP server address:%s,host ip:%s",HTTP_OTA_HOST,ipstr);
+    http_client_log("HTTP server address:%s,host ip:%s",req->host,ipstr);
 
     tcp_fd = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     if(IsValidSocket(tcp_fd) == 0)
@@ -59,7 +47,7 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
     
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = in_addr.s_addr;
-    addr.sin_port = htons(80);
+    addr.sin_port = htons(req->port);
 
     err = connect(tcp_fd,(struct sockaddr*)&addr,sizeof(addr));
     if(err == 0)
@@ -74,11 +62,11 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
 
     t.tv_sec = 2;
     t.tv_usec = 0;
-    err = send(tcp_fd,HTTP_REQUEST_HEADER_1,sizeof(HTTP_REQUEST_HEADER_1),0);
+    err = send(tcp_fd,req->req_header,strlen(req->req_header),0);
     if(err == 0)
         goto exit;
     msleep(2);
-    http_client_log("send to http server:\r\n%s",HTTP_REQUEST_HEADER_1);
+    http_client_log("send to http server:\r\n%s",req->req_header);
     while(1)
     {
         FD_ZERO(&readfds);
@@ -100,50 +88,12 @@ void GetDownloadUrlTcpClientThread(uint32_t arg)
             }
             buf[len] = '\0';
             http_client_log("recv data(len %d): %s",len,buf);
-            DealWithOtaHttpResponse(buf,len);
+            req->recv_deal_callback(buf,len);
         }
     }
     exit:
     http_client_log("http client thread exit with err:%d",err);
     if(buf != NULL) free(buf);
     SocketClose(&tcp_fd);
-    mico_rtos_delete_thread(NULL);
 }
 
-
-int HttpClientAppStart(void)
-{
-    int err = 0;
-    err = mico_rtos_create_thread(NULL, MICO_APPLICATION_PRIORITY, "http client",GetDownloadUrlTcpClientThread,0x600,0);
-    if(err != 0)
-        http_client_log("create tcp client thread fail");
-    return err;
-}
-
-
-int DealWithOtaHttpResponse(char* buf,int len)
-{
-    char* str_temp = NULL;
-    char* sub_str = NULL;
-    int len_temp = 0;
-    char http_response_state[20];
-    str_temp = strstr(buf,"HTTP/1.1");
-    if(str_temp == NULL)
-        return 1;
-    sub_str = strstr(buf,"\r\n");
-    len_temp = sub_str-str_temp;
-    memcpy(http_response_state,str_temp,len_temp);
-    http_client_log("http response state:%s",http_response_state);
-    if(strcmp(http_response_state,"HTTP/1.1 200 OK") != 0)
-    {
-        http_client_log("bad http response!");
-        return -1;
-    }
-    str_temp = strchr(buf,'{');
-    sub_str = strstr(str_temp,"\r\n");
-    len_temp = sub_str-str_temp;
-    http_client_log("context(len:%d):%s",len_temp,str_temp);
-
-
-    return 0;
-}
