@@ -8,6 +8,14 @@ typedef struct HTTP_REQ_INFO{
     int (*recv_deal_callback)(char*,int);
 }HTTP_REQ_INFO_T;
 
-int SendHttpRequest(HTTP_REQ_INFO_T* req);
+
+enum HTTP_CALLBACK_STATE
+{
+    HTTP_RECV_CONTINUE = 0,
+    HTTP_RECV_OVER,
+    HTTP_RECV_ERROR
+};
+
+int SendHttpRequest(uint32_t arg);
 
 #endif

@@ -38,4 +38,10 @@ typedef struct {
 #define MQTT_TIMER_PERIO 3000
 
 
+//#define MQTT_TEST
+
+//#define TCP_CLIENT_TEST
+
+#define HTTP_CLIENT_TEST
+
 #endif /* SRC_SHADOW_IOT_SHADOW_CONFIG_H_ */
