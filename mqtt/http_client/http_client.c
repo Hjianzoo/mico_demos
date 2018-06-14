@@ -5,16 +5,16 @@
 
 #define http_client_log(M, ...) custom_log("HTTP_Client", M, ##__VA_ARGS__)
 
-
 /*************************************************************************************************
  * @description:发送一个http请求并处理响应数据
  * @param req:HTTP_REQ_INFO_T结构体类型的入口参数，包括HOST、REQ Header、端口号以及处理相应数据的回调
  * @reutrn: -1:fail,返回其他值为成功；
 **************************************************************************************************/
-int SendHttpRequest(HTTP_REQ_INFO_T* req)
+int SendHttpRequest(uint32_t arg)
 {
     int err = 0;
     http_client_log("start------------>%s",__FUNCTION__);
+    HTTP_REQ_INFO_T* req = (HTTP_REQ_INFO_T*)arg;
     struct sockaddr_in addr;
     int tcp_fd = -1;
     struct timeval t;
@@ -83,8 +83,9 @@ int SendHttpRequest(HTTP_REQ_INFO_T* req)
     {
         FD_ZERO(&readfds);
         FD_SET(tcp_fd,&readfds);
-        if((select(tcp_fd+1,&readfds,NULL,NULL,&t))<0)
-            continue;
+        if(select(tcp_fd+1,&readfds,NULL,NULL,&t)<0)
+            goto exit;
+        http_client_log("http client idle");
         if(FD_ISSET(tcp_fd,&readfds))
         {
             len = recv(tcp_fd,buf,1024,0);
@@ -99,14 +100,17 @@ int SendHttpRequest(HTTP_REQ_INFO_T* req)
                 goto exit;
             }
             buf[len] = '\0';
-            http_client_log("recv data(len %d): %s",len,buf);
-            req->recv_deal_callback(buf,len);   //利用req的回调函数处理响应数据
+           http_client_log("recv data(len %d)",len);
+            err = req->recv_deal_callback(buf,len);   //利用req的回调函数处理响应数据
+            if(err == HTTP_RECV_OVER)
+                goto exit;
         }
     }
     exit:
     http_client_log("http client thread exit with err:%d",err);
     if(buf != NULL) free(buf);
     SocketClose(&tcp_fd);
+    mico_rtos_delete_thread( NULL );
     return err;
 }
 

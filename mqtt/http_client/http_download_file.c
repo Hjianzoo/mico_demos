@@ -3,6 +3,7 @@
 #include "SocketUtils.h"
 #include "cJSON.h"
 #include "http_download_file.h"
+#include "http_tool.h"
 
 #define http_download_log(M, ...) custom_log("http download", M, ##__VA_ARGS__)
 
@@ -10,13 +11,12 @@
 #define HTTP_OTA_HOST  "ota.fogcloud.io"
 
 
-#define HTTP_DONWLOAD_FILE_REQUEST  "\
+char HTTP_DONWLOAD_FILE_REQUEST[] =   {"\
 GET %s HTTP/1.1\r\n\
 Host: %s\r\n\
 Accept: text/html,application\r\n\
-Connection: keep-alive\r\n\
-Upgrade-Insecure-Requests: 1\r\n\r\n\
-"
+Connection: keep-alive\r\n\r\n\
+"};
 
 char HTTP_REQUEST_HEADER_GET_OTA_INFO[] = {\
 "PUT /v3/ota/product/ HTTP/1.1\r\n\
@@ -24,7 +24,7 @@ Host: ota.fogcloud.io\r\n\
 Connection: Close\r\n\
 Content-Type: application/json\r\n\
 Content-Length: 69\r\n\r\n\
-{\"productid\":\"cc085cdc581e11e8b7ac00163e30fc50\",\"dsn\":\"B0F893151E9F\"}\r\n\r\n"
+{\"productid\":\"cc085cdc581e11e8b7ac00163e30fc50\",\"dsn\":\"B0F893151E89\"}\r\n\r\n"
 };
 
 static FOG_V3_OTA_INFO_T ota_context = {0};
@@ -35,7 +35,7 @@ int DealWithOtaHttpResponse(char* buf,int len);
 
 static char http_download_host[64] = {0};
 static char http_download_request[512];
-
+static file_info_t file_info = {0}; 
 
 
 FOG_V3_OTA_INFO_T* GetOtaContext(void)
@@ -57,6 +57,7 @@ int HttpClientOtaFileDownload(void)
     FOG_V3_OTA_INFO_T* ota_info = GetOtaContext();      //Get已经得到的云端ota信息
     HTTP_REQ_INFO_T* download_file_req = NULL;          //定义固件下载的http req
     download_file_req = (HTTP_REQ_INFO_T*)malloc(sizeof(HTTP_REQ_INFO_T));
+    bzero(download_file_req,sizeof(HTTP_REQ_INFO_T));       //可以的话对申请到的内存地址清零，否则会导致字符串拷贝的时候出问题
     if(download_file_req == NULL)
     {
         http_download_log("init download_file_req error");
@@ -72,17 +73,22 @@ int HttpClientOtaFileDownload(void)
 
     strncpy(http_download_host,p,p_end-p);          //将获取到的host地址copy到req中
     sprintf(http_download_request,HTTP_DONWLOAD_FILE_REQUEST,ota_info->file_url,http_download_host);        //组包
-    strncpy(download_file_req->host,http_download_host,strlen(http_download_host));
-    strncpy(download_file_req->req_header,http_download_request,strlen(http_download_request));
+    strncpy(download_file_req->host,http_download_host,sizeof(http_download_host));
+    strncpy(download_file_req->req_header,http_download_request,sizeof(http_download_request));
     download_file_req->port = 80;
     download_file_req->recv_deal_callback = DealWithDownloadFile;
 
-
-    err = SendHttpRequest(download_file_req);
+    http_download_log("SendHttpRequest:%s",download_file_req->host);
+    err = StartHttpClient(download_file_req);
     while(1);
+
+    if(download_file_req != NULL)
+        free(download_file_req);
     return 1;
 
     exit:
+    if(download_file_req != NULL)
+        free(download_file_req);
     return -1;
 }
 
@@ -94,8 +100,76 @@ int HttpClientOtaFileDownload(void)
 **************************************************************************************************/
 int DealWithDownloadFile(char* buf,int len)
 {
-    http_download_log("%s",__FUNCTION__);
-    return 0;
+    //http_download_log("%s",__FUNCTION__);
+    int err = 0;
+    static uint8_t ota_start_flag = 0;
+    static uint8_t ota_over_flag = 0;
+    char *p = NULL;
+    char *p_end = NULL;
+    char http_state[3] = {0}; 
+    char ota_size_str[10] = {0};
+    static int offset_size = 0;
+    static uint32_t file_length = 0;
+    static uint32_t offset_addr = 0;
+    uint32_t write_len = 0;
+    p = buf;
+    if(ota_start_flag == 0)
+    {
+        p = strstr(buf,"HTTP/1.1");
+        p += (strlen("HTTP/1.1")+1);
+        strncpy(http_state,p,3);
+        http_download_log("http_state : %s",http_state);
+        if(0 != (strcmp(http_state,"200"))) 
+        {
+            http_download_log("response error http state");
+            goto exit;
+        }
+        p = strstr(p,"Content-Length:");
+        if(p == NULL)
+        {
+            goto exit;
+        }
+        p += strlen("Content-Length:");
+        p_end = strstr(p,"\r\n");
+        if(p_end == NULL)
+            goto exit;
+        if((p_end - p) > 10)
+        {
+             goto exit;
+        }
+        strncpy(ota_size_str,p,p_end-p);
+        http_download_log("ota size:%s",ota_size_str);
+        offset_size = num_str_to_int(ota_size_str,p_end-p);
+        http_download_log("offset size:%d",offset_size);
+        ota_start_flag = 1;
+        p = strstr(p,"\r\n\r\n");
+        p += sizeof("\r\n\r\n");
+
+        file_length = offset_size;
+        mico_logic_partition_t* ota_partition = MicoFlashGetInfo(MICO_PARTITION_OTA_TEMP);
+        file_info.file_len = ota_partition->partition_length;
+        file_info.flash_type = MICO_PARTITION_OTA_TEMP;
+        file_info.flash_addr = 0x00;
+        MicoFlashErase(file_info.flash_type,file_info.flash_addr,file_info.file_len);
+    }
+    if(ota_start_flag == 1)
+    {
+        write_len = len-(p-buf);
+        write_len = (write_len>file_length)?file_length:write_len;
+        //err = MicoFlashWrite(MICO_PARTITION_OTA_TEMP,&offset_addr,p,write_len);
+        //http_download_log("write in download offset = %d err = %d",offset_addr,err);
+        file_length -= write_len;
+        http_download_log("download file_length = %d",file_length);
+        if(file_length == 0)
+            ota_over_flag = 1;
+    }
+    
+    if(ota_over_flag == 1)
+        return HTTP_RECV_OVER;
+    return HTTP_RECV_CONTINUE;
+    exit:
+    http_download_log("%s  err ",__FUNCTION__);
+    return HTTP_RECV_ERROR;
 }
 
 /*************************************************************************************************
@@ -112,14 +186,14 @@ int DealWithOtaHttpResponse(char* buf,int len)
     char http_response_state[20];
     str_temp = strstr(buf,"HTTP/1.1");
     if(str_temp == NULL)
-        return 1;
+        return HTTP_RECV_ERROR;
     sub_str = strstr(buf,"\r\n");
     len_temp = sub_str-str_temp;
     memcpy(http_response_state,str_temp,len_temp);
     if(strcmp(http_response_state,"HTTP/1.1 200 OK") != 0)      //状态码为200则response正常
     {
         http_download_log("bad http response!");
-        return -1;
+        return HTTP_RECV_ERROR;
     }
     str_temp = strchr(buf,'{');     //获取response数据的起始地址
     sub_str = strstr(str_temp,"\r\n");  //获取response数据的结束地址
@@ -196,16 +270,24 @@ int GetOtaInfoFromHttpResponse(char* buf)
     cJSON_Delete(p_json);                                                  //释放已经定义的json对象
     cJSON_Delete(p_sub);
 
-    return 0;
+    return HTTP_RECV_CONTINUE;
 
     exit:
     http_download_log("cJSON parse error");
     cJSON_Delete(p_json);
     cJSON_Delete(p_sub);
-    return -1;
+    return HTTP_RECV_OVER;
 }
 
 
+int StartHttpClient(HTTP_REQ_INFO_T* http_req)
+{
+    int err = 0;
+    err =  mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "http client", SendHttpRequest,
+                                    0x2000,
+                                    (mico_thread_arg_t*)http_req );
+    return err;
+}
 
 /*************************************************************************************************
  * @description:获取ota固件起始函数
@@ -228,13 +310,16 @@ int HttpClientAppStart(void)
     http_get_url_req->port = 80;
     http_get_url_req->recv_deal_callback = DealWithOtaHttpResponse;     
 
-
-    err = SendHttpRequest(http_get_url_req);    //发送获取file url的http请求
+    err = StartHttpClient(http_get_url_req);    //发送获取file url的http请求
     if(err <= -1)
     {
         goto exit;
     }
     msleep(50);
+    while(ota_ready == 0)
+    {
+        msleep(50);
+    }
     if(ota_ready)           //如果获取ota信息成功，则开始下载ota固件
     {
         HttpClientOtaFileDownload();
