@@ -35,7 +35,7 @@ int SendHttpRequest(HTTP_REQ_INFO_T* req)
     hostent_content = gethostbyname(req->host);
     if(hostent_content == NULL)
     {
-        http_client_log("gethostbyname fail");
+        http_client_log("gethostbyname fail: %s",req->host);
         err = -1;
         goto exit;
     }

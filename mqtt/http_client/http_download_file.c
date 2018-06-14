@@ -62,7 +62,7 @@ int HttpClientOtaFileDownload(void)
         http_download_log("init download_file_req error");
         goto exit;
     }
-
+    memset(download_file_req,0,sizeof(HTTP_REQ_INFO_T));
     char *p = ota_info->file_url;               //获取host
     p = strstr(p,"http://");
     if( p == NULL)
