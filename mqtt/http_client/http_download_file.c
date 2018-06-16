@@ -143,8 +143,8 @@ int DealWithDownloadFile(char* buf,int len)
         http_download_log("offset size:%d",offset_size);
         ota_start_flag = 1;
         p = strstr(p,"\r\n\r\n");
-        p += sizeof("\r\n\r\n");
-
+        p += strlen("\r\n\r\n");
+        http_download_log("p:%s",p);
         file_length = offset_size;
         mico_logic_partition_t* ota_partition = MicoFlashGetInfo(MICO_PARTITION_OTA_TEMP);
         file_info.file_len = ota_partition->partition_length;
@@ -156,8 +156,8 @@ int DealWithDownloadFile(char* buf,int len)
     {
         write_len = len-(p-buf);
         write_len = (write_len>file_length)?file_length:write_len;
-        //err = MicoFlashWrite(MICO_PARTITION_OTA_TEMP,&offset_addr,p,write_len);
-        //http_download_log("write in download offset = %d err = %d",offset_addr,err);
+        err = MicoFlashWrite(MICO_PARTITION_OTA_TEMP,&offset_addr,p,write_len);
+        http_download_log("write in download offset = %d err = %d",offset_addr,err);
         file_length -= write_len;
         http_download_log("download file_length = %d",file_length);
         if(file_length == 0)
