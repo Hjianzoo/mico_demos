@@ -20,12 +20,13 @@ int SendHttpRequest(uint32_t arg)
     struct timeval t;
     fd_set readfds;
     int len;
-    char *buf = NULL;
+    //char *buf = NULL;
+    char buf[2048] = {0};
     char ipstr[16];
     struct hostent* hostent_content = NULL;
     char **pptr = NULL;
     struct in_addr in_addr;
-    buf = (char*)malloc(1024);
+    //buf = (char*)malloc(1024);
     if (buf == NULL)
     {
         http_client_log("init buf fail");
@@ -88,7 +89,7 @@ int SendHttpRequest(uint32_t arg)
         http_client_log("http client idle");
         if(FD_ISSET(tcp_fd,&readfds))
         {
-            len = recv(tcp_fd,buf,1024,0);
+            len = recv(tcp_fd,buf,2048,0);
             if(len<0)
             {
                 http_client_log("recv fail");
@@ -108,7 +109,7 @@ int SendHttpRequest(uint32_t arg)
     }
     exit:
     http_client_log("http client thread exit with err:%d",err);
-    if(buf != NULL) free(buf);
+    //if(buf != NULL) free(buf);
     SocketClose(&tcp_fd);
     mico_rtos_delete_thread( NULL );
     return err;
