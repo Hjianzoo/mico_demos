@@ -55,6 +55,11 @@ void ApplicationThread(uint32_t arg)
     #ifdef HTTP_CLIENT_TEST
     HttpClientAppStart();
     #endif
+
+
+    #ifdef UDP_TEST
+    UdpUserAppStart();
+    #endif
     mico_rtos_delete_thread( NULL );
 }
 

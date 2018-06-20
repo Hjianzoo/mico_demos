@@ -23,7 +23,8 @@
 NAME := App_AWS_Iot_sub_pub
 
 $(NAME)_SOURCES := mico_main.c mqtt_main.c tcp_client/tcp_client.c tcp_client/tcp_client_app.c\
-					http_client/http_client.c cJSON.c http_client/http_download_file.c http_client/http_tool.c
+					http_client/http_client.c cJSON.c http_client/http_download_file.c http_client/http_tool.c\
+					udp_client/udp_client.c udp_client/udp_app.c
 
 $(NAME)_COMPONENTS := lib_mqtt
 

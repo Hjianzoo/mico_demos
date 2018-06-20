@@ -42,6 +42,8 @@ typedef struct {
 
 //#define TCP_CLIENT_TEST
 
-#define HTTP_CLIENT_TEST
+//#define HTTP_CLIENT_TEST
+
+#define UDP_TEST
 
 #endif /* SRC_SHADOW_IOT_SHADOW_CONFIG_H_ */
