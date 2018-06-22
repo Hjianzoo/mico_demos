@@ -4,7 +4,13 @@
 typedef int (*recv_func_t)(char*,int);
 typedef int (*send_func_t)(char*,int);
 
+enum {
+    UDP_CLIENT = 0,
+    UDP_SERVER
+};
+
 typedef struct UDP_CONTEXT{
+    int udp_type;
     int udp_fd;
     char ip_str[20];
     int remote_port;
@@ -14,4 +20,5 @@ typedef struct UDP_CONTEXT{
 }UDP_CONTEXT_T;
 
 void UdpClientThread(void *arg);
+void UdpServerThread(void* arg);
 #endif

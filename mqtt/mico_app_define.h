@@ -26,7 +26,7 @@
 #define MQTT_SUB_NAME               "home/bedroom/temperature"//"6618fdda2a4f11e7a554fa163e876164/df358c1a348611e7a554fa163e876164/77a0853e3a1a11e7a554fa163e876164/status/json"
 #define MQTT_PUB_NAME               "home/kitchen/smokesensor"
 #define MQTT_PUB_NAME1              "home/house/doorsensor"
-#define MQTT_CLIENT_ID "77a0853e3a1a11e7a554fa163e876164"
+#define MQTT_CLIENT_ID              "77a0853e3a1a11e7a554fa163e876164"
 
 
 typedef struct {
@@ -38,12 +38,12 @@ typedef struct {
 #define MQTT_TIMER_PERIO 3000
 
 
-//#define MQTT_TEST
+#define MQTT_TEST
 
 //#define TCP_CLIENT_TEST
 
 //#define HTTP_CLIENT_TEST
 
-#define UDP_TEST
+//#define UDP_TEST
 
 #endif /* SRC_SHADOW_IOT_SHADOW_CONFIG_H_ */

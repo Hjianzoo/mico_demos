@@ -192,14 +192,16 @@ return mico_rtos_create_thread( NULL, MICO_APPLICATION_PRIORITY, "mqtt", mqtt_su
 **************************************************************************************************/
 static void MqttTimerHandler(void)
 {
-    char str_temp[30] = {};
+   //char str_temp[30] = {};
     static int i = 0;
-    sprintf(str_temp,"%s : %d","hello mqtt timer handle",i++);
+    char* str_temp = NULL;
+    str_temp = GetModuleInfo();
+    //sprintf(str_temp,"%s : %d","hello mqtt timer handle",i++);
     mqtt_log("%s",str_temp);
-    if((i%2) == 0)
-        MqttTopicPublish(MQTT_PUB_NAME,str_temp,sizeof(str_temp));
+    if((i++%2) == 0)
+        MqttTopicPublish(MQTT_PUB_NAME,str_temp,strlen(str_temp));
     else
-        MqttTopicPublish(MQTT_PUB_NAME1,str_temp,sizeof(str_temp));
+        MqttTopicPublish(MQTT_PUB_NAME1,str_temp,strlen(str_temp));
     mqtt_log ("free Memory %d bytes", MicoGetMemoryInfo()->free_memory);  
     if(i>10000)
         i = 0;
